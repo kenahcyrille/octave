@@ -1,0 +1,1 @@
+We'll need to pass settings for openblas for the linear algebra support. See ./configure --help for what's available. You'll need to use TC_OPENBLAS_DIR, TC_OPENBLAS_LIB and TC_OPENBLAS_INC appropriately.
