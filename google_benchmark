@@ -1,0 +1,41 @@
+#!/usr/bin/bash
+#---------------------------------------------------------
+# Set the base-dir and source the utilities
+TC_HPC_SOFTWARE=${TC_HPC_SOFTWARE:-"$(realpath ${PWD})"}
+source $TC_HPC_SOFTWARE/utilities/utils.sh
+
+#---------------------------------------------------------
+# TC-HPC build script for Google Benchmark
+#---------------------------------------------------------
+# download URL
+DOWNLOAD_URL='https://github.com/google/benchmark/archive/refs/tags/v1.6.1.tar.gz'
+# the md5sum of the package
+ARCHIVE_MD5='5e15c2edabf47e09108ecbcdb3afad68'
+DEPENDENCY_MODULE_LIST=''
+# The module help
+MODULEFILE_HELP='
+Google Benchmark is a library to support the benchmarking of functions, similar to unit-tests.
+'
+#---------------------------------------------------------
+# The build section
+#---------------------------------------------------------
+# First and foremost, set the prefixes
+set_prefixes
+
+# Next download the tarball and extract it
+# This places the extracted sources in $PKG_BUILD_DIR
+download_only
+
+# We need to load any dependency modules
+load_modules
+
+# Build and install Google Benchmark
+cd $PKG_BUILD_DIR
+cmake -E make_directory "build"
+cmake -E chdir "build" cmake -DCMAKE_INSTALL_PREFIX=${PKG_INSTALL_DIR} -DCMAKE_BUILD_TYPE=Release ..
+cmake --build "build" --config Release --target install
+
+# this function will create environments based on bin,lib,lib64,inc...
+create_lua_modulefile
+
+cd $TC_HPC_SOFTWARE
