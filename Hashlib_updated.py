@@ -246,3 +246,43 @@ def process_and_download_build_file(file_path, transferred_file, download_dir, t
             # Update the flat file with the new package information
             with open(transferred_file, 'a') as f:
                 f.write(f"{package_version},{download_url},{pkg_md5sum
+                                f.write(f"{package_version},{download_url},{pkg_md5sum}\n")
+
+            # Move the downloaded file to the transfer directory
+            transfer_path = os.path.join(transfer_file, os.path.basename(out_file))
+            if not os.path.exists(transfer_file):
+                os.makedirs(transfer_file)
+            os.rename(out_file, transfer_path)
+
+            return_msg += f"Successfully downloaded and verified {file_path}\n"
+        except Exception as e:
+            return_msg += f"An error occurred while processing {file_path}: {str(e)}\n"
+
+    return return_msg
+
+def main(build_files_glob, download_dir, transferred_file, transfer_file):
+    build_files = glob.glob(build_files_glob, recursive=True)
+    [graph, package_to_file_dict] = create_all_build_list(build_files)
+
+    sorted_packages = topological_sort(graph)
+    print(f"{bcolors.OKBLUE}Processing {len(sorted_packages)} packages{bcolors.ENDC}")
+
+    for package in sorted_packages:
+        build_file_path = package_to_file_dict[package]
+        print(f"{bcolors.OKCYAN}Processing build file: {build_file_path}{bcolors.ENDC}")
+        message = process_and_download_build_file(build_file_path, transferred_file, download_dir, transfer_file)
+        if message:
+            print(message)
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Download and verify build files.')
+    parser.add_argument('--build_files_glob', type=str, required=True, help='Glob pattern to search for build files')
+    parser.add_argument('--download_dir', type=str, required=True, help='Directory to download the packages')
+    parser.add_argument('--transferred_file', type=str, required=True, help='File to log transferred packages')
+    parser.add_argument('--transfer_file', type=str, required=True, help='Directory to move the downloaded files to')
+
+    args = parser.parse_args()
+
+    main(args.build_files_glob, args.download_dir, args.transferred_file, args.transfer_file)
