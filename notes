@@ -1,2 +1,44 @@
+#!/usr/bin/bash
+# set -x
+#---------------------------------------------------------
+# Set the base-dir and source the utilities
+TC_HPC_SOFTWARE=$(realpath ${PWD})'/'
+source $TC_HPC_SOFTWARE/utilities/utils.sh
 
-We need to have two additional utility scripts, one to check for missing builds, and another to get the build list of the missing builds.
+#---------------------------------------------------------
+# TC-HPC build script
+#---------------------------------------------------------
+# download URL
+DOWNLOAD_URL='https://github.com/openucx/ucx/releases/download/v1.12.1/ucx-1.12.1.tar.gz'
+# the md5sum of the package
+ARCHIVE_MD5="bf0a888598857c122bc0e69cbc2d9dff"
+DEPENDENCY_MODULE_LIST="gcc/8.5"
+# The module help
+MODULEFILE_HELP="Unified Communication X: an open-source, production-grade communication framework for data-centric and high-performance applications"
+
+#---------------------------------------------------------
+# The build section
+#---------------------------------------------------------
+# First and foremost, set the prefixes
+# This creates the $PKG_BUILD_DIR, the $PKG_INSTALL_DIR
+# and the $
+set_prefixes
+
+# Next download the tarball and extract it
+# This places the extracted sources in $PKG_BUILD_DIR
+download_and_extract
+
+# We need to load any dependency modules
+load_modules
+
+# Next set the compiler config and flags
+set_build_env "GCC_RELEASE"
+
+# compile
+cd ${PKG_BUILD_DIR}/ucx-1.12.1
+./configure --prefix=$PKG_INSTALL_DIR 
+make
+make install
+
+# this function will create environments based on bin,lib,lib64,inc...
+create_lua_modulefile
