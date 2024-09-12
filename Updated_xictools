@@ -1,0 +1,88 @@
+#!/usr/bin/bash
+
+#---------------------------------------------------------
+# Set the base-dir and source the utilities
+TC_HPC_SOFTWARE=$(realpath ${PWD})'/'
+source $TC_HPC_SOFTWARE/utilities/utils.sh
+
+#---------------------------------------------------------
+# TC-HPC build script
+#---------------------------------------------------------
+# download URL
+DOWNLOAD_URL='https://github.com/wrcad/xictools/archive/refs/tags/xt-4.3.13.tar.gz'
+# the md5sum of the package
+ARCHIVE_MD5="83a15a44100b2f8264bb9c5fb85388ff"
+DEPENDENCY_MODULE_LIST="gcc/12.3"
+# The module help
+MODULEFILE_HELP="XicTools Package Distribution Site"
+#---------------------------------------------------------
+# The build section
+#---------------------------------------------------------
+# First and foremost, set the prefixes
+set_prefixes
+
+# Next download the tarball and extract it
+# This places the extracted sources in $PKG_BUILD_DIR
+download_and_extract
+
+# We need to load any dependency modules
+load_modules
+
+# Next set the compiler config and flags
+set_build_env "GCC_RELEASE"
+
+# install missing system library dependencies
+download_and_extract_rpms gsl.x86_64 gsl-devel.x86_64
+
+cp -r $PKG_BUILD_DIR/deps/usr/bin $PKG_INSTALL_DIR
+cp -r $PKG_BUILD_DIR/deps/usr/lib64 $PKG_INSTALL_DIR
+cp -r $PKG_BUILD_DIR/deps/usr/include $PKG_INSTALL_DIR
+export PATH=$PKG_INSTALL_DIR/bin:$PATH
+export LD_LIBRARY_PATH=$PKG_INSTALL_DIR/lib64:$LD_LIBRARY_PATH
+export LIBRARY_PATH=$PKG_INSTALL_DIR/lib64:$LIBRARY_PATH
+export CPATH=$PKG_INSTALL_DIR/include:$CPATH
+export LDFLAGS=-L$PKG_INSTALL_DIR/lib64
+export CPPFLAGS=-I$PKG_INSTALL_DIR/include
+
+# compile
+cd ${PKG_BUILD_DIR}/xictools-xt-4.3.13
+cp Makefile.sample Makefile
+make config
+make all
+make packages
+cd xt_base/packages/pkgfiles
+rpm2cpio xictools_adms-*.rpm | cpio -id
+rpm2cpio xictools_fastcap-*.rpm | cpio -id
+rpm2cpio xictools_fasthenry-*.rpm | cpio -id
+rpm2cpio xictools_mozy-*.rpm | cpio -id
+rpm2cpio xictools_mrouter-*.rpm | cpio -id
+rpm2cpio xictools_wrspice-*.rpm | cpio -id
+rpm2cpio xictools_vl-*.rpm | cpio -id
+rpm2cpio xictools_xic-*.rpm | cpio -id
+cp usr/local/xictools/bin/* $PKG_INSTALL_DIR/bin
+cp -r usr/local/xictools/adms $PKG_INSTALL_DIR
+cp -r usr/local/xictools/fastcap $PKG_INSTALL_DIR
+cp -r usr/local/xictools/fasthenry $PKG_INSTALL_DIR
+cp -r usr/local/xictools/mozy $PKG_INSTALL_DIR
+cp -r usr/local/xictools/mrouter $PKG_INSTALL_DIR
+cp -r usr/local/xictools/vl $PKG_INSTALL_DIR
+cp -r usr/local/xictools/wrspice.current $PKG_INSTALL_DIR
+cp usr/local/xictools/wrspice.current/bin/* $PKG_INSTALL_DIR/bin
+cp usr/local/xictools/xic.current/bin/* $PKG_INSTALL_DIR/bin
+
+# Patch the correct WRspice startup file in wrspice.current/startup/wrspiceinit
+cat > $PKG_INSTALL_DIR/wrspice.current/startup/wrspiceinit <<EOF
+* Standard WRspice system startup file
+* This file should be edited to provide system-wide defaults.
+* set up hardcopy
+set hcopycommand = "lpr -h"
+*set hcopydriver = postscript_line_draw
+set parhier=local
+EOF
+
+# this function will create environments based on bin,lib,lib64,inc...
+create_lua_modulefile \
+	'setenv("SPICE_LIB_DIR", pathJoin(base, "wrspice.current", "startup"))'
+
+cd $TC_HPC_SOFTWARE
+rm -rf $PKG_BUILD_DIR
